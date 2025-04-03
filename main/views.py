@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
 from .models import Complaint, Building, Department, ComplaintStatus
+from django.db import IntegrityError
 
 def custom_login(request):
     if request.method == 'POST':
@@ -33,18 +34,65 @@ def custom_login(request):
     return render(request, 'login.html')
 
 def submit_complaint(request):
-    if request.method == 'POST':
-        complaint = Complaint.objects.create(
-            title=request.POST['title'],
-            description=request.POST['description'],
-            building_id=request.POST['building'],
-            department_id=request.POST['department'],
-            status=ComplaintStatus.objects.get(name='Новая')
-        )
-        return redirect('submit_complaint')
-    
+    error_message = None
     buildings = Building.objects.all()
     departments = Department.objects.all()
+    
+    if request.method == 'POST':
+        title = request.POST.get('title', '')
+        description = request.POST.get('description', '')
+        building_id = request.POST.get('building', '')
+        department_id = request.POST.get('department', '')
+        
+        if not (title and description and building_id and department_id):
+            error_message = 'Все поля должны быть заполнены'
+            return render(request, 'submit_complaint.html', {
+                'buildings': buildings,
+                'departments': departments,
+                'error': error_message,
+                'title': title,
+                'description': description,
+                'building_id': building_id,
+                'department_id': department_id
+            })
+        
+        try:
+            building = Building.objects.get(id=building_id)
+            department = Department.objects.get(id=department_id)
+            
+            if len(title) > 200:
+                error_message = 'Заголовок не должен превышать 200 символов'
+                return render(request, 'submit_complaint.html', {
+                    'buildings': buildings,
+                    'departments': departments,
+                    'error': error_message,
+                    'title': title,
+                    'description': description,
+                    'building_id': building_id,
+                    'department_id': department_id
+                })
+            
+            complaint = Complaint.objects.create(
+                title=title,
+                description=description,
+                building=building,
+                department=department,
+                status=ComplaintStatus.objects.get(name='Новая')
+            )
+            return redirect('submit_complaint')
+            
+        except (Building.DoesNotExist, Department.DoesNotExist) as e:
+            error_message = 'Выбрано несуществующее здание или департамент'
+            return render(request, 'submit_complaint.html', {
+                'buildings': buildings,
+                'departments': departments,
+                'error': error_message,
+                'title': title,
+                'description': description,
+                'building_id': building_id,
+                'department_id': department_id
+            })
+    
     return render(request, 'submit_complaint.html', {
         'buildings': buildings,
         'departments': departments

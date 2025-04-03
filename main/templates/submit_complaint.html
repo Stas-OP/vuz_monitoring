@@ -105,6 +105,14 @@
         .btn:hover {
             background-color: #0056b3;
         }
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #f5c6cb;
+        }
     </style>
 </head>
 <body>
@@ -120,18 +128,25 @@
             </div>
             <div class="right-side">
                 <h2>Подача жалобы</h2>
+                
+                {% if error %}
+                <div class="error-message">
+                    {{ error }}
+                </div>
+                {% endif %}
+                
                 <form method="POST">
                     {% csrf_token %}
                     <div class="form-group">
                         <label for="complaint-title">Заголовок жалобы</label>
-                        <input id="complaint-title" name="title" placeholder="Например: Сломанный стул в аудитории" type="text" required/>
+                        <input id="complaint-title" name="title" placeholder="Например: Сломанный стул в аудитории" type="text" required value="{{ title|default:'' }}"/>
                     </div>
                     <div class="form-group">
                         <label for="building">Корпус</label>
                         <select id="building" name="building" required>
                             <option value="">Выберите корпус</option>
                             {% for building in buildings %}
-                            <option value="{{ building.id }}">{{ building }}</option>
+                            <option value="{{ building.id }}" {% if building_id == building.id|stringformat:"i" %}selected{% endif %}>{{ building }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -140,13 +155,13 @@
                         <select id="department" name="department" required>
                             <option value="">Выберите подразделение</option>
                             {% for department in departments %}
-                            <option value="{{ department.id }}">{{ department }}</option>
+                            <option value="{{ department.id }}" {% if department_id == department.id|stringformat:"i" %}selected{% endif %}>{{ department }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="problem-description">Описание проблемы</label>
-                        <textarea id="problem-description" name="description" placeholder="Подробно опишите проблему..." required></textarea>
+                        <textarea id="problem-description" name="description" placeholder="Подробно опишите проблему..." required>{{ description|default:'' }}</textarea>
                     </div>
                     <button type="submit" class="btn">Отправить жалобу</button>
                 </form>
