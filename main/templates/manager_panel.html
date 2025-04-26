@@ -134,6 +134,7 @@
                     <th>Корпус</th>
                     <th>Подразделение</th>
                     <th>Фото</th>
+                    <th>Контакты</th>
                     <th>Статус</th>
                 </tr>
             </thead>
@@ -152,6 +153,17 @@
                             </a>
                         {% else %}
                             Нет фото
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if complaint.contact_name %}
+                            <i class="fas fa-user" title="{{ complaint.contact_name }}"></i> {{ complaint.contact_name }}<br>
+                        {% endif %}
+                        {% if complaint.contact_info %}
+                            <i class="fas fa-envelope" title="{{ complaint.contact_info }}"></i> {{ complaint.contact_info }}
+                        {% endif %}
+                        {% if not complaint.contact_name and not complaint.contact_info %}
+                            -
                         {% endif %}
                     </td>
                     <td>

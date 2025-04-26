@@ -8,6 +8,7 @@ from django.db.models import Count
 from django.db.models.functions import TruncDate
 import json
 from datetime import datetime, timedelta
+from django.contrib import messages
 
 def custom_login(request):
     if request.method == 'POST':
@@ -42,24 +43,46 @@ def submit_complaint(request):
     buildings = Building.objects.all()
     departments = Department.objects.all()
     
+    # Сохраняем введенные данные для повторного отображения в случае ошибки
+    submitted_data = {}
+
     if request.method == 'POST':
+        submitted_data = request.POST.copy()
         title = request.POST.get('title', '')
         description = request.POST.get('description', '')
         building_id = request.POST.get('building', '')
         department_id = request.POST.get('department', '')
         photo = request.FILES.get('photo')
+        provide_contacts = request.POST.get('provide_contacts') == 'on' # Проверяем чекбокс
+        contact_name = request.POST.get('contact_name', '')
+        contact_info = request.POST.get('contact_info', '')
         
+        # Базовая валидация
         if not (title and description and building_id and department_id):
-            error_message = 'Все поля должны быть заполнены'
-            return render(request, 'submit_complaint.html', {
+            error_message = 'Заголовок, описание, корпус и подразделение обязательны для заполнения'
+            # Удаляем сообщение об успехе, если оно было
+            storage = messages.get_messages(request)
+            storage.used = True
+            context = {
                 'buildings': buildings,
                 'departments': departments,
                 'error': error_message,
-                'title': title,
-                'description': description,
-                'building_id': building_id,
-                'department_id': department_id
-            })
+            }
+            context.update(submitted_data) # Добавляем введенные данные обратно в форму
+            return render(request, 'submit_complaint.html', context)
+
+        # Валидация контактных данных, если чекбокс отмечен
+        if provide_contacts and not (contact_name and contact_info):
+            error_message = 'Если вы хотите оставить контакты, пожалуйста, заполните имя и контактную информацию.'
+            storage = messages.get_messages(request)
+            storage.used = True
+            context = {
+                'buildings': buildings,
+                'departments': departments,
+                'error': error_message,
+            }
+            context.update(submitted_data)
+            return render(request, 'submit_complaint.html', context)
         
         try:
             building = Building.objects.get(id=building_id)
@@ -67,42 +90,67 @@ def submit_complaint(request):
             
             if len(title) > 200:
                 error_message = 'Заголовок не должен превышать 200 символов'
-                return render(request, 'submit_complaint.html', {
+                storage = messages.get_messages(request)
+                storage.used = True
+                context = {
                     'buildings': buildings,
                     'departments': departments,
                     'error': error_message,
-                    'title': title,
-                    'description': description,
-                    'building_id': building_id,
-                    'department_id': department_id
-                })
+                }
+                context.update(submitted_data)
+                return render(request, 'submit_complaint.html', context)
             
-            complaint = Complaint.objects.create(
-                title=title,
-                description=description,
-                building=building,
-                department=department,
-                status=ComplaintStatus.objects.get(name='Новая'),
-                photo=photo
-            )
+            # Создаем жалобу, включая контакты (если они предоставлены)
+            complaint_data = {
+                'title': title,
+                'description': description,
+                'building': building,
+                'department': department,
+                'status': ComplaintStatus.objects.get(name='Новая'),
+                'photo': photo
+            }
+            if provide_contacts:
+                complaint_data['contact_name'] = contact_name
+                complaint_data['contact_info'] = contact_info
+
+            Complaint.objects.create(**complaint_data)
+            
+            # Добавляем сообщение об успехе
+            messages.success(request, 'Успешно! Ваша жалоба успешно отправлена.')
+            
+            # Перенаправляем GET-запросом, чтобы избежать повторной отправки формы
             return redirect('submit_complaint')
             
         except (Building.DoesNotExist, Department.DoesNotExist) as e:
             error_message = 'Выбрано несуществующее здание или департамент'
-            return render(request, 'submit_complaint.html', {
+            storage = messages.get_messages(request)
+            storage.used = True
+            context = {
                 'buildings': buildings,
                 'departments': departments,
                 'error': error_message,
-                'title': title,
-                'description': description,
-                'building_id': building_id,
-                'department_id': department_id
-            })
+            }
+            context.update(submitted_data)
+            return render(request, 'submit_complaint.html', context)
+        except ComplaintStatus.DoesNotExist:
+            # Обработка редкого случая, если статус 'Новая' отсутствует
+            error_message = 'Ошибка системы: не найден начальный статус жалобы. Обратитесь к администратору.'
+            storage = messages.get_messages(request)
+            storage.used = True
+            context = {
+                'buildings': buildings,
+                'departments': departments,
+                'error': error_message,
+            }
+            context.update(submitted_data)
+            return render(request, 'submit_complaint.html', context)
     
-    return render(request, 'submit_complaint.html', {
+    # Для GET запроса или при первом отображении формы
+    context = {
         'buildings': buildings,
         'departments': departments
-    })
+    }
+    return render(request, 'submit_complaint.html', context)
 
 @login_required
 def manager_panel(request):

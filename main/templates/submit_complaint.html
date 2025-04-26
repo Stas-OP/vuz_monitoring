@@ -113,6 +113,21 @@
             margin-bottom: 15px;
             border: 1px solid #f5c6cb;
         }
+        .contact-details {
+            display: none; /* Скрыто по умолчанию */
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+    </style>
+    <!-- Добавим стили для скрытия полей -->
+    <style>
+        .contact-details {
+            display: none; /* Скрыто по умолчанию */
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
     </style>
 </head>
 <body>
@@ -129,6 +144,16 @@
             <div class="right-side">
                 <h2>Подача жалобы</h2>
                 
+                <!-- Блок для отображения сообщений Django -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} message-box" role="alert">
+                            {{ message }}
+                            <button type="button" class="close-message" aria-label="Close">&times;</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
                 {% if error %}
                 <div class="error-message">
                     {{ error }}
@@ -167,10 +192,83 @@
                         <label for="complaint-photo">Прикрепить фото (необязательно)</label>
                         <input type="file" id="complaint-photo" name="photo" accept="image/*">
                     </div>
+                    <!-- Чекбокс и поля для контактов -->
+                    <div class="form-group">
+                         <input type="checkbox" id="provide-contacts" name="provide_contacts" style="width: auto; margin-right: 5px;">
+                         <label for="provide-contacts" style="display: inline;">Оставить контактные данные для обратной связи</label>
+                    </div>
+                    <div class="contact-details" id="contact-fields">
+                        <div class="form-group">
+                            <label for="contact-name">Ваше имя</label>
+                            <input type="text" id="contact-name" name="contact_name" placeholder="Как к вам обращаться?">
+                        </div>
+                        <div class="form-group">
+                            <label for="contact-info">Контактная информация (Email или Телефон)</label>
+                            <input type="text" id="contact-info" name="contact_info" placeholder="example@mail.com или +79XXXXXXXXX">
+                        </div>
+                    </div>
+                    <!-- Конец блока контактов -->
                     <button type="submit" class="btn">Отправить жалобу</button>
                 </form>
             </div>
         </div>
     </div>
+
+    <!-- JavaScript для показа/скрытия полей -->
+    <script>
+        const provideContactsCheckbox = document.getElementById('provide-contacts');
+        const contactFieldsDiv = document.getElementById('contact-fields');
+
+        provideContactsCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                contactFieldsDiv.style.display = 'block';
+            } else {
+                contactFieldsDiv.style.display = 'none';
+            }
+        });
+
+        // Скрипт для закрытия сообщений
+        document.querySelectorAll('.close-message').forEach(button => {
+            button.addEventListener('click', function() {
+                this.parentElement.style.display = 'none';
+            });
+        });
+    </script>
+
+    <!-- Стили для сообщений (можно вынести в CSS) -->
+     <style>
+        .message-box {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            position: relative;
+        }
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .alert-error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+         .close-message {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: inherit;
+            opacity: 0.7;
+        }
+        .close-message:hover {
+             opacity: 1;
+        }
+    </style>
+
 </body>
 </html> 
