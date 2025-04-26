@@ -17,6 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from main import views
+from django.conf import settings # Импорт настроек
+from django.conf.urls.static import static # Импорт функции static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -28,3 +30,7 @@ urlpatterns = [
     path('update-status/<int:complaint_id>/', views.update_status, name='update_status'),
     path('delete-complaint/<int:complaint_id>/', views.delete_complaint, name='delete_complaint'),
 ]
+
+# Добавляем обработку медиа-файлов только в режиме DEBUG
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

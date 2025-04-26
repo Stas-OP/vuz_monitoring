@@ -4,6 +4,10 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
 from .models import Complaint, Building, Department, ComplaintStatus
 from django.db import IntegrityError
+from django.db.models import Count
+from django.db.models.functions import TruncDate
+import json
+from datetime import datetime, timedelta
 
 def custom_login(request):
     if request.method == 'POST':
@@ -43,6 +47,7 @@ def submit_complaint(request):
         description = request.POST.get('description', '')
         building_id = request.POST.get('building', '')
         department_id = request.POST.get('department', '')
+        photo = request.FILES.get('photo')
         
         if not (title and description and building_id and department_id):
             error_message = 'Все поля должны быть заполнены'
@@ -77,7 +82,8 @@ def submit_complaint(request):
                 description=description,
                 building=building,
                 department=department,
-                status=ComplaintStatus.objects.get(name='Новая')
+                status=ComplaintStatus.objects.get(name='Новая'),
+                photo=photo
             )
             return redirect('submit_complaint')
             
@@ -102,10 +108,41 @@ def submit_complaint(request):
 def manager_panel(request):
     complaints = Complaint.objects.all().order_by('-created_at')
     statuses = ComplaintStatus.objects.all()
-    return render(request, 'manager_panel.html', {
+
+    # Данные для графиков
+    status_distribution = Complaint.objects.values('status__name').annotate(count=Count('id')).order_by('status__name')
+    complaints_by_building = Complaint.objects.values('building__name').annotate(count=Count('id')).order_by('building__name')
+
+    # Динамика за последние 7 дней
+    one_week_ago = datetime.now() - timedelta(days=7)
+    complaints_over_time = Complaint.objects.filter(created_at__gte=one_week_ago)\
+                                        .annotate(date=TruncDate('created_at'))\
+                                        .values('date')\
+                                        .annotate(count=Count('id'))\
+                                        .order_by('date')
+
+    # Подготовка данных для Chart.js
+    status_labels = [item['status__name'] for item in status_distribution]
+    status_data = [item['count'] for item in status_distribution]
+
+    building_labels = [item['building__name'] for item in complaints_by_building]
+    building_data = [item['count'] for item in complaints_by_building]
+
+    time_labels = [item['date'].strftime('%Y-%m-%d') for item in complaints_over_time]
+    time_data = [item['count'] for item in complaints_over_time]
+
+
+    context = {
         'complaints': complaints,
-        'statuses': statuses
-    })
+        'statuses': statuses,
+        'status_labels': json.dumps(status_labels),
+        'status_data': json.dumps(status_data),
+        'building_labels': json.dumps(building_labels),
+        'building_data': json.dumps(building_data),
+        'time_labels': json.dumps(time_labels),
+        'time_data': json.dumps(time_data),
+    }
+    return render(request, 'manager_panel.html', context)
 
 @login_required
 def admin_panel(request):

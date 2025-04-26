@@ -135,7 +135,7 @@
                 </div>
                 {% endif %}
                 
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="form-group">
                         <label for="complaint-title">Заголовок жалобы</label>
@@ -162,6 +162,10 @@
                     <div class="form-group">
                         <label for="problem-description">Описание проблемы</label>
                         <textarea id="problem-description" name="description" placeholder="Подробно опишите проблему..." required>{{ description|default:'' }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="complaint-photo">Прикрепить фото (необязательно)</label>
+                        <input type="file" id="complaint-photo" name="photo" accept="image/*">
                     </div>
                     <button type="submit" class="btn">Отправить жалобу</button>
                 </form>

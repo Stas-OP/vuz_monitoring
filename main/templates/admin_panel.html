@@ -83,6 +83,7 @@
                         <th>Заголовок</th>
                         <th>Корпус</th>
                         <th>Подразделение</th>
+                        <th>Фото</th>
                         <th>Статус</th>
                         <th>Действия</th>
                     </tr>
@@ -95,6 +96,15 @@
                         <td>{{ complaint.title }}</td>
                         <td>{{ complaint.building }}</td>
                         <td>{{ complaint.department }}</td>
+                        <td>
+                            {% if complaint.photo %}
+                                <a href="{{ complaint.photo.url }}" target="_blank">
+                                    <img src="{{ complaint.photo.url }}" alt="Фото жалобы {{ complaint.id }}" style="max-width: 100px; max-height: 100px; object-fit: cover;">
+                                </a>
+                            {% else %}
+                                Нет фото
+                            {% endif %}
+                        </td>
                         <td>{{ complaint.status }}</td>
                         <td>
                             <form method="POST" action="{% url 'delete_complaint' complaint.id %}">

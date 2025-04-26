@@ -33,10 +33,18 @@ venv\Scripts\activate     # для Windows
 pip install -r requirements.txt
 
 4. Примените миграции:
+python manage.py makemigrations main
 python manage.py migrate
 
 5. Создайте начальные данные:
-python manage.py shell < main/initial_data.py
+   - Для Linux/Mac:
+     ```bash
+     python manage.py shell < main/initial_data.py
+     ```
+   - Для Windows (PowerShell):
+     ```powershell
+     python manage.py shell -c "exec(open('main/initial_data.py', encoding='utf-8').read())"
+     ```
 
 6. Запустите сервер разработки:
 python manage.py runserver

@@ -4,6 +4,7 @@
 <head>
     <title>Панель менеджера</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -74,14 +75,55 @@
         .save-button:hover {
             background-color: #0056b3;
         }
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .chart-card {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .chart-card h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 16px;
+            color: #333;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Панель менеджера</h1>
-        <a href="{% url 'logout' %}" class="logout">Выйти</a>
+        <form action="{% url 'logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="header-button">Выйти</button>
+        </form>
     </div>
     <div class="container">
+        <div class="charts-container">
+            <div class="chart-card">
+                <h3>Распределение по статусам</h3>
+                <canvas id="statusChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Жалобы по корпусам</h3>
+                <canvas id="buildingChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Динамика жалоб (последние 7 дней)</h3>
+                <canvas id="timeChart"></canvas>
+            </div>
+        </div>
+
         <h2>Список жалоб</h2>
         <table>
             <thead>
@@ -91,6 +133,7 @@
                     <th>Заголовок</th>
                     <th>Корпус</th>
                     <th>Подразделение</th>
+                    <th>Фото</th>
                     <th>Статус</th>
                 </tr>
             </thead>
@@ -102,6 +145,15 @@
                     <td>{{ complaint.title }}</td>
                     <td>{{ complaint.building }}</td>
                     <td>{{ complaint.department }}</td>
+                    <td>
+                        {% if complaint.photo %}
+                            <a href="{{ complaint.photo.url }}" target="_blank">
+                                <img src="{{ complaint.photo.url }}" alt="Фото жалобы {{ complaint.id }}" style="max-width: 100px; max-height: 100px; object-fit: cover;">
+                            </a>
+                        {% else %}
+                            Нет фото
+                        {% endif %}
+                    </td>
                     <td>
                         <form method="POST" action="{% url 'update_status' complaint.id %}">
                             {% csrf_token %}
@@ -120,5 +172,109 @@
             </tbody>
         </table>
     </div>
+
+    <script>
+        // Данные из Django context
+        const statusLabels = JSON.parse('{{ status_labels|escapejs }}');
+        const statusData = JSON.parse('{{ status_data|escapejs }}');
+        const buildingLabels = JSON.parse('{{ building_labels|escapejs }}');
+        const buildingData = JSON.parse('{{ building_data|escapejs }}');
+        const timeLabels = JSON.parse('{{ time_labels|escapejs }}');
+        const timeData = JSON.parse('{{ time_data|escapejs }}');
+
+        // Цвета для графиков
+        const chartColors = [
+            '#4CAF50',
+            '#2196F3',
+            '#FFC107',
+            '#9E9E9E',
+            '#FF5722', '#607D8B', '#E91E63', '#795548'
+        ];
+
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'pie',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    label: 'Количество жалоб',
+                    data: statusData,
+                    backgroundColor: chartColors.slice(0, statusLabels.length),
+                    borderColor: '#fff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+
+        const buildingCtx = document.getElementById('buildingChart').getContext('2d');
+        new Chart(buildingCtx, {
+            type: 'bar',
+            data: {
+                labels: buildingLabels,
+                datasets: [{
+                    label: 'Количество жалоб',
+                    data: buildingData,
+                    backgroundColor: chartColors[1],
+                    borderColor: chartColors[1],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                           stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        const timeCtx = document.getElementById('timeChart').getContext('2d');
+        new Chart(timeCtx, {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [{
+                    label: 'Количество жалоб',
+                    data: timeData,
+                    fill: false,
+                    borderColor: chartColors[0],
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                         ticks: {
+                           stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html> 
